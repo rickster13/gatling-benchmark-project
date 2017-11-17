@@ -1,5 +1,7 @@
 package com.experiments.calvin
 
+import java.util.UUID
+
 import com.experiments.calvin.ExampleSimulation._
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
@@ -8,11 +10,10 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.Random
 
 object ExampleSimulation {
 
-  def postCollectors(duration: Duration) = during(duration) {
+  def createMember(duration: Duration) = during(duration) {
     // ${collectorNumber} is obtained through Gatling feeder
     exec(
       http("create members")
@@ -20,7 +21,7 @@ object ExampleSimulation {
         .body(StringBody(
           """
             |{
-            | "collectorNumber": "${collectorNumber}"
+            | "member": "${memberId}"
             |}
           """.stripMargin))
         .asJSON
@@ -33,17 +34,17 @@ class ExampleSimulation extends Simulation {
   val testDuration = props.getOrElse("duration", "600").toInt
   val users = props.getOrElse("users", "10").toInt
   val baseUrl = props.getOrElse("baseUrl", "http://localhost")
-  val randomCollectorNumberFeeder = Iterator continually {
+  val randomMemberIdFeeder = Iterator continually {
     Map {
-      "collectorNumber" -> (Random.nextInt(Integer.MAX_VALUE) + 10000000000L)
+      "memberId" -> UUID.randomUUID()
     }
   }
 
   val protocol = http.baseURL(baseUrl).acceptHeader("*/*")
   val simulationScenario =
     scenario("Create Members Simulation")
-      .feed(randomCollectorNumberFeeder)
-      .exec(postCollectors(testDuration))
+      .feed(randomMemberIdFeeder)
+      .exec(createMember(testDuration))
 
   // Run tests using the closed model (connection re-use)
   setUp {
